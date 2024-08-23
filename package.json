@@ -16,5 +16,11 @@
   "bugs": {
     "url": "https://github.com/Vinicinn/lobinho-server-side/issues"
   },
-  "homepage": "https://github.com/Vinicinn/lobinho-server-side#readme"
+  "homepage": "https://github.com/Vinicinn/lobinho-server-side#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "nodemon": "^3.1.4",
+    "socket.io": "^4.7.5"
+  }
 }
