@@ -1,3 +1,4 @@
+const fs = require("fs");
 const express = require("express");
 const app = express();
 const http = require("http");
@@ -18,8 +19,14 @@ let configs = {};
 configs.jogadores = [];
 configs.prontos = 0;
 
+const funcoes = JSON.parse(fs.readFileSync("funcoes.json", "utf-8"));
+
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
+
+  socket.on("solicitarFuncoes", () => {
+    socket.emit("receberFuncoes", funcoes);
+  });
 
   socket.on("novoJogador", (data) => {
     configs.jogadores.push({ id: socket.id, nome: data });
