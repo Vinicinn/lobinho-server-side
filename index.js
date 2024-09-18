@@ -22,12 +22,15 @@ configs.prontos = 0;
 const funcoes = JSON.parse(fs.readFileSync("funcoes.json", "utf-8"));
 
 io.on("connection", (socket) => {
+  // ao logar
   console.log(`User Connected: ${socket.id}`);
 
+  // ao abrir ajuda
   socket.on("solicitarFuncoes", () => {
     socket.emit("receberFuncoes", funcoes);
   });
 
+  // quando colocar o nick
   socket.on("novoJogador", (data) => {
     configs.jogadores.push({ id: socket.id, nome: data });
     console.log("Jogador " + data + " entrou com id: " + socket.id);
@@ -52,6 +55,10 @@ io.on("connection", (socket) => {
       const jogadorDesconectado = configs.jogadores.find(
         (jogador) => jogador.id === socket.id
       );
+
+      if (jogadorDesconectado.pronto) {
+        configs.prontos--;
+      }
 
       console.log("Jogador " + jogadorDesconectado.nome + " saiu.");
       configs.jogadores = configs.jogadores.filter(
