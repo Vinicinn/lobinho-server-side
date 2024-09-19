@@ -14,58 +14,85 @@ const io = new Server(server, {
   },
 });
 
-// ATRIBUTOS DO JOGO
-let configs = {};
-configs.jogadores = [];
-configs.prontos = 0;
+let assets = {
+  jogadores: [],
+  prontos: 0,
+};
 
 const funcoes = JSON.parse(fs.readFileSync("funcoes.json", "utf-8"));
 
 io.on("connection", (socket) => {
-  // ao logar
   console.log(`User Connected: ${socket.id}`);
 
-  // ao abrir ajuda
-  socket.on("solicitarFuncoes", () => {
-    socket.emit("receberFuncoes", funcoes);
+  // TELA DE LOGIN --------------------------------------------------------------------------------
+  socket.join("login");
+
+  // abriu menu ajuda
+  socket.on("funcoes", () => {
+    socket.emit("funcoes", funcoes);
   });
 
-  // quando colocar o nick
-  socket.on("novoJogador", (data) => {
-    configs.jogadores.push({ id: socket.id, nome: data });
-    console.log("Jogador " + data + " entrou com id: " + socket.id);
-
-    io.emit("atualizarJogadores", configs.jogadores);
-    io.emit("jogadoresProntos", configs.prontos);
-  });
-
-  socket.on("alterarPronto", (data) => {
-    if (data) {
-      configs.jogadores.at(socket.id).pronto = true;
-      configs.prontos += 1;
+  // pediu pra entrar
+  socket.on("entrar", (nick, callback) => {
+    // verifica nick
+    if (assets.jogadores.some((jogador) => jogador.nome === nick)) {
+      // nick em uso
+      callback({
+        status: "error",
+      });
     } else {
-      configs.jogadores.at(socket.id).pronto = false;
-      configs.prontos -= 1;
+      // nick disponivel
+      callback({
+        status: "ok",
+      });
+      // cadastra no server
+      assets.jogadores.push({ id: socket.id, nome: nick, pronto: false });
+      // troca sala
+      socket.join("lobby");
+      // atualiza quem ta no lobby
+      io.to("lobby").emit("jogadores", assets.jogadores);
     }
-    io.emit("jogadoresProntos", configs.prontos);
   });
 
-  socket.on("disconnect", () => {
-    if (configs.jogadores.length) {
-      const jogadorDesconectado = configs.jogadores.find(
-        (jogador) => jogador.id === socket.id
-      );
-
-      if (jogadorDesconectado.pronto) {
-        configs.prontos--;
+  // TELA DO LOBBY --------------------------------------------------------------------------------
+  // apertou pronto
+  socket.on("alterarPronto", (value) => {
+    // verifica quem foi
+    const jogador = assets.jogadores.find((j) => j.id === socket.id);
+    if (jogador) {
+      // muda o pronto
+      jogador.pronto = value;
+      if (jogador.pronto) {
+        assets.prontos++;
+      } else {
+        assets.prontos--;
       }
+    }
+    // atualiza quem ta no lobby
+    io.to("lobby").emit("jogadores", assets.jogadores);
+    io.to("lobby").emit("prontos", assets.prontos);
+  });
 
-      console.log("Jogador " + jogadorDesconectado.nome + " saiu.");
-      configs.jogadores = configs.jogadores.filter(
+  // DESCONECTOU DA PAGINA ------------------------------------------------------------------------
+  socket.on("disconnect", () => {
+    // verifica se tinha alguem logado
+    if (assets.jogadores.length) {
+      // procure quem saiu
+      const jogadorDesconectado = assets.jogadores.find(
+        (jodador) => jodador.id == socket.id
+      );
+      // remove pronto se pronto
+      if (jogadorDesconectado.pronto) {
+        assets.prontos--;
+      }
+      // remove cadastro
+      assets.jogadores = assets.jogadores.filter(
         (jogador) => jogador.id !== socket.id
       );
-
-      io.emit("atualizarJogadores", configs.jogadores);
+      console.log("Jogador " + jogadorDesconectado.nome + " saiu.");
+      // atualiza quem ta no lobby
+      io.to("lobby").emit("jogadores", assets.jogadores);
+      io.to("lobby").emit("prontos", assets.prontos);
     }
   });
 });
