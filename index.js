@@ -14,10 +14,8 @@ const io = new Server(server, {
   },
 });
 
-let assets = {
-  jogadores: [],
-  prontos: 0,
-};
+let jogadores = [];
+let prontos = 0;
 
 const funcoes = JSON.parse(fs.readFileSync("funcoes.json", "utf-8"));
 
@@ -35,7 +33,7 @@ io.on("connection", (socket) => {
   // pediu pra entrar
   socket.on("entrar", (nick, callback) => {
     // verifica nick
-    if (assets.jogadores.some((jogador) => jogador.nome === nick)) {
+    if (jogadores.some((jogador) => jogador.nome === nick)) {
       // nick em uso
       callback({
         status: "error",
@@ -46,11 +44,13 @@ io.on("connection", (socket) => {
         status: "ok",
       });
       // cadastra no server
-      assets.jogadores.push({ id: socket.id, nome: nick, pronto: false });
+      jogadores.push({ id: socket.id, nome: nick, pronto: false });
+      console.log("Jogador '" + nick + "' conectado com o id: " + socket.id);
       // troca sala
       socket.join("lobby");
       // atualiza quem ta no lobby
-      io.to("lobby").emit("jogadores", assets.jogadores);
+      io.to("lobby").emit("jogadores", jogadores);
+      io.to("lobby").emit("prontos", prontos);
     }
   });
 
@@ -58,41 +58,39 @@ io.on("connection", (socket) => {
   // apertou pronto
   socket.on("alterarPronto", (value) => {
     // verifica quem foi
-    const jogador = assets.jogadores.find((j) => j.id === socket.id);
+    const jogador = jogadores.find((j) => j.id === socket.id);
     if (jogador) {
-      // muda o pronto
+      // coloca ou tira de pronto
       jogador.pronto = value;
       if (jogador.pronto) {
-        assets.prontos++;
+        prontos++;
       } else {
-        assets.prontos--;
+        prontos--;
       }
     }
     // atualiza quem ta no lobby
-    io.to("lobby").emit("jogadores", assets.jogadores);
-    io.to("lobby").emit("prontos", assets.prontos);
+    io.to("lobby").emit("jogadores", jogadores);
+    io.to("lobby").emit("prontos", prontos);
   });
 
   // DESCONECTOU DA PAGINA ------------------------------------------------------------------------
   socket.on("disconnect", () => {
     // verifica se tinha alguem logado
-    if (assets.jogadores.length) {
+    if (jogadores.length) {
       // procure quem saiu
-      const jogadorDesconectado = assets.jogadores.find(
+      const jogadorDesconectado = jogadores.find(
         (jodador) => jodador.id == socket.id
       );
       // remove pronto se pronto
       if (jogadorDesconectado.pronto) {
-        assets.prontos--;
+        prontos--;
       }
       // remove cadastro
-      assets.jogadores = assets.jogadores.filter(
-        (jogador) => jogador.id !== socket.id
-      );
+      jogadores = jogadores.filter((jogador) => jogador.id !== socket.id);
       console.log("Jogador " + jogadorDesconectado.nome + " saiu.");
       // atualiza quem ta no lobby
-      io.to("lobby").emit("jogadores", assets.jogadores);
-      io.to("lobby").emit("prontos", assets.prontos);
+      io.to("lobby").emit("jogadores", jogadores);
+      io.to("lobby").emit("prontos", prontos);
     }
   });
 });
