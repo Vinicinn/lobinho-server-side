@@ -71,7 +71,7 @@ io.on("connection", (socket) => {
     // atualiza quem ta no lobby
     io.to("lobby").emit("jogadores", jogadores);
     io.to("lobby").emit("prontos", prontos);
-
+    // se todos prontos começar contagem regressiva
     if (jogadores.length === prontos) {
       io.to("lobby").emit("iniciarContagem");
     } else {
