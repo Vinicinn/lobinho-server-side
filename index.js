@@ -71,6 +71,12 @@ io.on("connection", (socket) => {
     // atualiza quem ta no lobby
     io.to("lobby").emit("jogadores", jogadores);
     io.to("lobby").emit("prontos", prontos);
+
+    if (jogadores.length === prontos) {
+      io.to("lobby").emit("iniciarContagem");
+    } else {
+      io.to("lobby").emit("pararContagem");
+    }
   });
 
   // DESCONECTOU DA PAGINA ------------------------------------------------------------------------
