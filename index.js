@@ -130,12 +130,22 @@ io.on("connection", (socket) => {
       console.log("todo mundo carregou");
       jogadoresIngame = jogadores;
       distrubuir();
+      carregados = 0;
     }
   });
+
   socket.on("esperandoFuncao", () => {
-    let jogador = jogadores.find((j) => j.id === socket.id);
+    const jogador = jogadoresIngame.find((j) => j.id === socket.id);
     socket.emit("receberFuncao", jogador.funcao);
     console.log(jogador.nome + " recebeu sua funcao");
+  });
+
+  socket.on("esperandoNomes", () => {
+    let nomes = [];
+    jogadoresIngame.forEach((jogador) => {
+      nomes.push(jogador.nome);
+    });
+    socket.emit("receberNomes", nomes);
   });
 
   // DESCONECTOU DA PAGINA ------------------------------------------------------------------------
