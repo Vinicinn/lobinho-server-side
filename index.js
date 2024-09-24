@@ -14,8 +14,47 @@ const io = new Server(server, {
   },
 });
 
+// lobby
 let jogadores = [];
 let prontos = 0;
+
+// ingame
+let jogadoresIngame = [];
+let carregados = 0;
+
+// distrubuir funcoes
+function distrubuir() {
+  let quantidadeAldeia = 0;
+  let quantidadeLobos = 0;
+
+  console.log("distribuindo...");
+  jogadoresIngame.forEach((jogador) => {
+    if (quantidadeAldeia === 0) {
+      while (true) {
+        let funcaoAleatoria =
+          funcoes[Math.floor(Math.random() * funcoes.length)];
+        if (funcaoAleatoria.equipe === "aldeia") {
+          jogador.funcao = funcaoAleatoria;
+          quantidadeAldeia++;
+          break;
+        }
+      }
+    } else if (quantidadeLobos === 0) {
+      while (true) {
+        let funcaoAleatoria =
+          funcoes[Math.floor(Math.random() * funcoes.length)];
+        if (funcaoAleatoria.equipe === "lobisomens") {
+          jogador.funcao = funcaoAleatoria;
+          quantidadeLobos++;
+          break;
+        }
+      }
+    } else {
+      jogador.funcao = funcoes[Math.floor(Math.random() * funcoes.length)];
+    }
+  });
+  console.log("funcoes atribuidas!");
+}
 
 const funcoes = JSON.parse(fs.readFileSync("funcoes.json", "utf-8"));
 
@@ -51,6 +90,7 @@ io.on("connection", (socket) => {
       // atualiza quem ta no lobby
       io.to("lobby").emit("jogadores", jogadores);
       io.to("lobby").emit("prontos", prontos);
+      io.to("lobby").emit("pararContagem");
     }
   });
 
@@ -63,8 +103,10 @@ io.on("connection", (socket) => {
       // coloca ou tira de pronto
       jogador.pronto = value;
       if (jogador.pronto) {
+        console.log(jogador.nome + " deu pronto");
         prontos++;
       } else {
+        console.log(jogador.nome + " tirou o pronto");
         prontos--;
       }
     }
@@ -77,6 +119,23 @@ io.on("connection", (socket) => {
     } else {
       io.to("lobby").emit("pararContagem");
     }
+  });
+
+  // TELA DO JOGO ---------------------------------------------------------------------------------
+  socket.on("carreguei", () => {
+    console.log(jogadores.find((j) => j.id === socket.id).nome + " carregou");
+    socket.join("ingame");
+    carregados++;
+    if (carregados == jogadores.length) {
+      console.log("todo mundo carregou");
+      jogadoresIngame = jogadores;
+      distrubuir();
+    }
+  });
+  socket.on("esperandoFuncao", () => {
+    let jogador = jogadores.find((j) => j.id === socket.id);
+    socket.emit("receberFuncao", jogador.funcao);
+    console.log(jogador.nome + " recebeu sua funcao");
   });
 
   // DESCONECTOU DA PAGINA ------------------------------------------------------------------------
@@ -97,6 +156,9 @@ io.on("connection", (socket) => {
       // atualiza quem ta no lobby
       io.to("lobby").emit("jogadores", jogadores);
       io.to("lobby").emit("prontos", prontos);
+      if (jogadores.length === prontos) {
+        io.to("lobby").emit("iniciarContagem");
+      }
     }
   });
 });
